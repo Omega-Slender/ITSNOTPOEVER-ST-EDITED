@@ -1,0 +1,19 @@
+{
+  "name": "jai-poe-selenium",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "I'm so desperate to use poe But cookie doesn't work",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cloudflared": "^0.4.0",
+    "dotenv": "^16.3.1",
+    "express": "4.18.2",
+    "node-html-parser": "^6.1.5",
+    "selenium-webdriver": "^4.10.0"
+  }
+}
