@@ -9,3 +9,5 @@ What does this modification bring?
 In summary, I optimized the code to obtain faster responses and fixed a couple of errors.
 
 I didn't steal this project, I just edited it for the non-profit community.
+
+Only available for PC and not mobile devices.
