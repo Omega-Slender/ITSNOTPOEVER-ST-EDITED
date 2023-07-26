@@ -102,7 +102,6 @@ async function convertOAIToPoe(messages) {
       `//*[@id="__next"]/div[1]/div/section/div[2]/div/div/footer/div/div/div[1]/textarea`
     )
   );
-  console.log("searching for charname");
   
   for (let sentence in systemsplit) {
     if (systemsplit[sentence].includes("Write ")) {
@@ -148,23 +147,25 @@ async function convertOAIToPoe(messages) {
   
   console.log('message dump done')
   let contentsplit = systemmsgs.split('\n');
-  
 	let bigMessage = contentsplit.join('\n');
+	console.log("Searching for charname");
 	let characterName = bigMessage.match(/Character: "([^"]*)"/)[1];
 	let userName = bigMessage.match(/User: "([^"]*)"/)[1];
 	bigMessage = bigMessage.replace(/\[Start a new chat\]/g, "");
 	console.log("Character Name:", characterName);
 	console.log("User Name:", userName);
+	
 	await driver.executeScript("arguments[0].value = arguments[1]", textfield, bigMessage);
 	await textfield.sendKeys(`If you accept the requirements, please confirm by responding with "Understood." and nothing more. Once I receive your precise confirmation message, I will specify the context of the scene, as well as the characteristics, background, and personality of your character in the following message.`);
 	await textfield.sendKeys(Key.ENTER)
-	console.log('send system message done');
+	console.log('Send prompt');
 	await driver.sleep(500);
-let splitedprompt = newprompt.split("\n");
-  bigMessage = "[CHAT]\n" + splitedprompt.join('\n');
-  bigMessage = bigMessage.replace(/DATA_1/g, characterName);
-  bigMessage = bigMessage.replace(/DATA_2/g, userName);
-  await driver.executeScript("arguments[0].value = arguments[1]", textfield, bigMessage);
+
+  let splitedprompt = newprompt.split("\n");
+	bigMessage = "[CHAT]\n" + splitedprompt.join('\n');
+	bigMessage = bigMessage.replace(/DATA_1/g, characterName);
+	bigMessage = bigMessage.replace(/DATA_2/g, userName);
+	await driver.executeScript("arguments[0].value = arguments[1]", textfield, bigMessage);
 
   let understoodDetected = false;
   while (!understoodDetected) {
@@ -177,38 +178,36 @@ let splitedprompt = newprompt.split("\n");
       if (chatBreakButton && chatBreakButton.rawText.includes("Understood.") ||
           markdownContainer && markdownContainer.rawText.includes("Understood.")) {
         understoodDetected = true;
+		console.log('The prompt was accepted');
       }
     } catch (err) {
-      console.log(err.message);
+      console.log('The prompt was not accepted');
     }
   }
-  
+
 let buttonIsDisabled = true;
 while (buttonIsDisabled) {
   try {
     let button = await driver.findElement(By.css('.Button_buttonBase__0QP_m.Button_primary__pIDjn.ChatMessageSendButton_sendButton__OMyK1.ChatMessageInputContainer_sendButton__s7XkP'));
     buttonIsDisabled = await button.isEnabled() === false;
     if (buttonIsDisabled) {
-      console.log('Button is disabled');
+      console.log('Submit button not available');
       await driver.sleep(100);
     } else {
-      console.log('Button is enabled');
-      await new Promise(resolve => setTimeout(resolve, 1000));
-	  
       const startTime = Date.now();
-      while (Date.now() - startTime < 1000) {
+      while (Date.now() - startTime < 2000) {
         await textfield.sendKeys(Key.ENTER);
+		console.log("Send");
         await new Promise(resolve => setTimeout(resolve, 100));
       }
-      console.log("Sending content");
+      console.log("Send CHAT");
     }
   } catch (error) {
     console.error(error);
   }
-  if (buttonIsDisabled) {
-  }
 }
 
+console.log('Submit button is available');
 let buttonExists = false;
 let shouldWait = true;
 
@@ -220,9 +219,9 @@ while (!buttonExists && shouldWait) {
     await driver.findElement(By.css('.Button_buttonBase__0QP_m.Button_tertiary__yq3dG.ChatStopMessageButton_stopButton__LWNj6'));
     buttonExists = true;
     shouldWait = false;
-    console.log('Button exists');
+    console.log('Wait button exists');
   } catch (error) {
-    console.log('Button does not exist yet');
+    console.log('Wait button does not exist');
     if (shouldWait) {
       await driver.sleep(500);
     }
