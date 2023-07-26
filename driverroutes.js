@@ -223,7 +223,7 @@ while (!buttonExists && shouldWait) {
   } catch (error) {
     console.log('Wait button does not exist');
     if (shouldWait) {
-      await driver.sleep(500);
+      await driver.sleep(100);
     }
   }
 
