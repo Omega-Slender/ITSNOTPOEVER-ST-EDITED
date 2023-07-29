@@ -136,55 +136,52 @@ async function convertOAIToPoe(messages) {
       aftersystem = true
       newprompt += `DATA_1: `;
       newprompt += messages[i].content;
-      newprompt += "\n";
+      newprompt += "\n\n";
     }
     if (messages[i].role === "user") {
       newprompt += "DATA_2: ";
       newprompt += messages[i].content;
-      newprompt += "\n";
+      newprompt += "\n\n";
     }
   }
   
-  console.log('message dump done')
+  console.log('The information was successfully extracted')
   let contentsplit = systemmsgs.split('\n');
 	let bigMessage = contentsplit.join('\n');
-	console.log("Searching for charname");
+	console.log("Searching User and Character names");
 	let characterName = bigMessage.match(/Character: "([^"]*)"/)[1];
 	let userName = bigMessage.match(/User: "([^"]*)"/)[1];
 	bigMessage = bigMessage.replace(/\[Start a new chat\]/g, "");
-	console.log("Character Name:", characterName);
 	console.log("User Name:", userName);
+	console.log("Character Name:", characterName);
 	
 	await driver.executeScript("arguments[0].value = arguments[1]", textfield, bigMessage);
 	await textfield.sendKeys(`If you accept the requirements, please confirm by responding with "Understood." and nothing more. Once I receive your precise confirmation message, I will specify the context of the scene, as well as the characteristics, background, and personality of your character in the following message.`);
 	await textfield.sendKeys(Key.ENTER)
-	console.log('Send prompt');
-	await driver.sleep(500);
-
-  let splitedprompt = newprompt.split("\n");
+	console.log('It was pasted in the text box "Main prompt"');
+	await driver.sleep(200);
+	let splitedprompt = newprompt.split("\n");
 	bigMessage = "[CHAT]\n" + splitedprompt.join('\n');
 	bigMessage = bigMessage.replace(/DATA_1/g, characterName);
 	bigMessage = bigMessage.replace(/DATA_2/g, userName);
-	await driver.executeScript("arguments[0].value = arguments[1]", textfield, bigMessage);
+	let contentToUse = bigMessage;
+	const MAX_MESSAGE_LENGTH = 4500;
+	let splitIndex = MAX_MESSAGE_LENGTH;
+	let isMessageTooLong = contentToUse.length > MAX_MESSAGE_LENGTH;
+	
+	while (contentToUse[splitIndex] !== '\n' && splitIndex > 0) {
+    splitIndex--;
+	}
+	const firstPart = contentToUse.slice(0, splitIndex);
+	const remainingPart = contentToUse.slice(splitIndex);
+	const firstPartWithNewLine = firstPart + "\n";
+	await driver.executeScript("arguments[0].value = arguments[1]", textfield, firstPartWithNewLine);
+	if(isMessageTooLong) {
+    await textfield.sendKeys("[Answer only with a \"Understood 2.\" to be able to give you your next instructions.]");
+	}
+	await driver.sleep(2000);
 
-  let understoodDetected = false;
-  while (!understoodDetected) {
-    try {
-      await driver.sleep(500);
-      let src = await driver.getPageSource();
-      let root = htmlparser.parse(src);
-      let chatBreakButton = root.querySelector(".ChatMessageInputFooter_chatBreakButton__hqJ3v");
-      let markdownContainer = root.querySelector(".Markdown_markdownContainer__UyYrv");
-      if (chatBreakButton && chatBreakButton.rawText.includes("Understood.") ||
-          markdownContainer && markdownContainer.rawText.includes("Understood.")) {
-        understoodDetected = true;
-		console.log('The prompt was accepted');
-      }
-    } catch (err) {
-      console.log('The prompt was not accepted');
-    }
-  }
-
+//Detect if "Submit button" is available and if "Understood." exists
 let buttonIsDisabled = true;
 while (buttonIsDisabled) {
   try {
@@ -192,51 +189,214 @@ while (buttonIsDisabled) {
     buttonIsDisabled = await button.isEnabled() === false;
     if (buttonIsDisabled) {
       console.log('Submit button not available');
-      await driver.sleep(100);
+      await driver.sleep(500);
     } else {
-      const startTime = Date.now();
-      while (Date.now() - startTime < 2000) {
-        await textfield.sendKeys(Key.ENTER);
-		console.log("Send");
-        await new Promise(resolve => setTimeout(resolve, 100));
+      console.log('Submit button is now available');
+
+      while (true) {
+        let mensajeFinal = '';
+        let contenidoWebNuevo = await driver.getPageSource();
+        let raizHTMLNuevo = htmlparser.parse(contenidoWebNuevo);
+        let elementosMarkdownNuevo = raizHTMLNuevo.querySelectorAll(".Markdown_markdownContainer__UyYrv");
+        let ultimaBurbujaChatNuevo = elementosMarkdownNuevo[elementosMarkdownNuevo.length - 1].querySelectorAll('p');
+
+        for (let elemento of ultimaBurbujaChatNuevo) {
+          mensajeFinal += elemento.innerHTML;
+          mensajeFinal += '\n';
+        }
+        mensajeFinal = mensajeFinal
+          .replaceAll("<em>", '*')
+          .replaceAll("</em>", '*')
+          .replaceAll("<br>", '')
+          .replaceAll("<p>", '')
+          .replaceAll("</p>", '')
+          .replaceAll('<a node="[object Object]" class="MarkdownLink_linkifiedLink__KxC9G">', '')
+          .replaceAll("</a>", '')
+          .replaceAll('<code node="[object Object]">', '')
+          .replaceAll('</code>', '');
+
+        if (mensajeFinal.includes("Understood.")) {
+          console.log("Understood, detected");
+          mensajeFinal = '';
+
+          while (true) {
+            await textfield.sendKeys(Key.ENTER);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            contenidoWebNuevo = await driver.getPageSource();
+            raizHTMLNuevo = htmlparser.parse(contenidoWebNuevo);
+            elementosMarkdownNuevo = raizHTMLNuevo.querySelectorAll(".Markdown_markdownContainer__UyYrv");
+            ultimaBurbujaChatNuevo = elementosMarkdownNuevo[elementosMarkdownNuevo.length - 1].querySelectorAll('p');
+
+            for (let elemento of ultimaBurbujaChatNuevo) {
+              mensajeFinal += elemento.innerHTML;
+              mensajeFinal += '\n';
+            }
+            mensajeFinal = mensajeFinal
+              .replaceAll("<em>", '*')
+              .replaceAll("</em>", '*')
+              .replaceAll("<br>", '')
+              .replaceAll("<p>", '')
+              .replaceAll("</p>", '')
+              .replaceAll('<a node="[object Object]" class="MarkdownLink_linkifiedLink__KxC9G">', '')
+              .replaceAll("</a>", '')
+              .replaceAll('<code node="[object Object]">', '')
+              .replaceAll('</code>', '');
+
+            if (!mensajeFinal.includes("Understood.")) {
+              break;
+            }
+          }
+        } else {
+          if (isMessageTooLong) {
+            console.log("Sending [CHAT]");
+            await driver.executeScript("arguments[0].value = arguments[1]", textfield, "[CHAT]\n" + remainingPart);
+          }
+          break;
+        }
       }
-      console.log("Send CHAT");
     }
   } catch (error) {
     console.error(error);
   }
 }
 
-console.log('Submit button is available');
+//Detect if "Submit button 2" is available and if "Understood 2." exists
+if (isMessageTooLong) {
+  await driver.sleep(2000);
+  let actionButtonInactive = true;
+  while (actionButtonInactive) {
+    try {
+      let actionButton = await driver.findElement(By.css('.Button_buttonBase__0QP_m.Button_primary__pIDjn.ChatMessageSendButton_sendButton__OMyK1.ChatMessageInputContainer_sendButton__s7XkP'));
+      actionButtonInactive = await actionButton.isEnabled() === false;
+      if (actionButtonInactive) {
+        console.log('Submit button not available 2');
+        await driver.sleep(500);
+      } else {
+        console.log('Submit button is now available 2');
+
+        while (true) {
+          let finalMessage = '';
+          let newWebContent = await driver.getPageSource();
+          let newHTMLRoot = htmlparser.parse(newWebContent);
+          let newMarkdownElements = newHTMLRoot.querySelectorAll(".Markdown_markdownContainer__UyYrv");
+          let newChatBubbleLast = newMarkdownElements[newMarkdownElements.length - 1].querySelectorAll('p');
+
+          for (let element of newChatBubbleLast) {
+            finalMessage += element.innerHTML;
+            finalMessage += '\n';
+          }
+          finalMessage = finalMessage
+            .replaceAll("<em>", '*')
+            .replaceAll("</em>", '*')
+            .replaceAll("<br>", '')
+            .replaceAll("<p>", '')
+            .replaceAll("</p>", '')
+            .replaceAll('<a node="[object Object]" class="MarkdownLink_linkifiedLink__KxC9G">', '')
+            .replaceAll("</a>", '')
+            .replaceAll('<code node="[object Object]">', '')
+            .replaceAll('</code>', '');
+
+          if (finalMessage.includes("Understood 2.")) {
+            console.log("Understood 2, detected");
+            finalMessage = '';
+
+            while (true) {
+              await textfield.sendKeys(Key.ENTER);
+              await new Promise(resolve => setTimeout(resolve, 500));
+              newWebContent = await driver.getPageSource();
+              newHTMLRoot = htmlparser.parse(newWebContent);
+              newMarkdownElements = newHTMLRoot.querySelectorAll(".Markdown_markdownContainer__UyYrv");
+              newChatBubbleLast = newMarkdownElements[newMarkdownElements.length - 1].querySelectorAll('p');
+
+              for (let element of newChatBubbleLast) {
+                finalMessage += element.innerHTML;
+                finalMessage += '\n';
+              }
+              finalMessage = finalMessage
+                .replaceAll("<em>", '*')
+                .replaceAll("</em>", '*')
+                .replaceAll("<br>", '')
+                .replaceAll("<p>", '')
+                .replaceAll("</p>", '')
+                .replaceAll('<a node="[object Object]" class="MarkdownLink_linkifiedLink__KxC9G">', '')
+                .replaceAll("</a>", '')
+                .replaceAll('<code node="[object Object]">', '')
+                .replaceAll('</code>', '');
+
+              if (!finalMessage.includes("Understood 2.")) {
+                break;
+              }
+            }
+          } else {
+            console.log("Sending [CHAT] 2");
+            break;
+          }
+        }
+      }
+    } catch (exception) {
+      console.error(exception);
+    }
+  }
+}
+
+//Detect if "[CHAT]" or "..." exist
+let mensajeFinalChat = '';
+let contenidoWebActualChat, contenidoWebNuevoChat = '';
+
+while (true) {
+  contenidoWebActualChat = await driver.getPageSource();
+  let raizHTMLChat = htmlparser.parse(contenidoWebActualChat);
+  let elementosMarkdownChat = raizHTMLChat.querySelectorAll(".Markdown_markdownContainer__UyYrv");
+  let ultimaBurbujaChatChat = elementosMarkdownChat[elementosMarkdownChat.length - 1].querySelectorAll('p');
+
+  for (let elementoChat in ultimaBurbujaChatChat) {
+    mensajeFinalChat += ultimaBurbujaChatChat[elementoChat].innerHTML;
+    mensajeFinalChat += '\n';
+  }
+  mensajeFinalChat = mensajeFinalChat.replaceAll("<em>", '*')
+    .replaceAll("</em>", '*')
+    .replaceAll("<br>", '')
+    .replaceAll("<p>", '')
+    .replaceAll("</p>", '')
+    .replaceAll('<a node="[object Object]" class="MarkdownLink_linkifiedLink__KxC9G">', '')
+    .replaceAll("</a>", '')
+    .replaceAll('<code node="[object Object]">', '')
+    .replaceAll('</code>', '');
+
+  if (mensajeFinalChat.includes("[CHAT]") || mensajeFinalChat.includes("...")) {
+    console.log("Awaiting response");
+	mensajeFinalChat = '';
+  } else {
+    console.log("Response was detected");
+    break;
+  }
+
+  await new Promise(resolver => setTimeout(resolver, 500));
+}
+
+//Wait button
 let buttonExists = false;
-let shouldWait = true;
+let startTime = Date.now();
 
-const waitThreeSeconds = () => new Promise(resolve => setTimeout(resolve, 4000));
-const startTime = Date.now();
+while (!buttonExists) {
+  if ((Date.now() - startTime) > 2500) {
+    console.log('Time out after 2.5 seconds');
+    break;
+  }
 
-while (!buttonExists && shouldWait) {
   try {
     await driver.findElement(By.css('.Button_buttonBase__0QP_m.Button_tertiary__yq3dG.ChatStopMessageButton_stopButton__LWNj6'));
     buttonExists = true;
-    shouldWait = false;
     console.log('Wait button exists');
   } catch (error) {
     console.log('Wait button does not exist');
-    if (shouldWait) {
-      await driver.sleep(100);
-    }
-  }
-
-  const currentTime = Date.now();
-  if (currentTime - startTime >= 3000) {
-    shouldWait = false;
-    console.log('Timeout: 3 seconds elapsed');
+	await driver.sleep(200);
   }
 }
-
 return newprompt;
 }
 
+//Export mensage
 async function sagedriverCompletion(req, res) {
   let maxtoken = req.body.max_tokens;
   driver.findElement(By.className("ChatMessageInputFooter_chatBreakButton__hqJ3v")).click();
@@ -274,7 +434,7 @@ async function sagedriverCompletion(req, res) {
       .replaceAll('<code node="[object Object]">', '')
       .replaceAll('</code>', '');
 
-    console.log('Proceeding to the next steps.');
+    console.log('Proceeding to the next steps');
     break;
   }
 
