@@ -1,34 +1,46 @@
 import edge from "selenium-webdriver/edge.js";
 import firefox from "selenium-webdriver/firefox.js";
-import { Builder, Key,By } from "selenium-webdriver"; 
+import chrome from "selenium-webdriver/chrome.js";
+import { Builder, By, Key } from "selenium-webdriver";
 import htmlparser from "node-html-parser";
-import {
-  WEBDRIVERMODE,
-  JBWAITING,
-  RESULTWAITING,
-  COOKIE,
-  BROWSER,
-} from "./config.js";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+import { WEBDRIVERMODE, COOKIE, BROWSER } from "./config.js";
+
 let charname = "";
-// configure browser options ...
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 console.log(COOKIE);
 console.log(WEBDRIVERMODE);
 var driver;
 
-if(WEBDRIVERMODE == true){
+async function initializeDriver() {
+  let driverPath = join(__dirname, "drivers");
 
-if (BROWSER === "firefox") driver = new Builder().forBrowser("firefox").build();
-else if (BROWSER === 'chrome') driver = new Builder().forBrowser("chrome").build();
-else {
-  var service = new edge.ServiceBuilder().setPort(55555).build();
-  var options = new edge.Options();
-  driver = edge.Driver.createSession(options, service);
-}
+  if (BROWSER === "firefox") {
+    driver = new Builder()
+      .forBrowser("firefox")
+      .setFirefoxService(new firefox.ServiceBuilder(join(driverPath, "geckodriver.exe")))
+      .build();
+  } else if (BROWSER === "chrome") {
+    driver = new Builder()
+      .forBrowser("chrome")
+      .setChromeService(new chrome.ServiceBuilder(join(driverPath, "chromedriver.exe")))
+      .build();
+  } else {
+    var service = new edge.ServiceBuilder(join(driverPath, "msedgedriver.exe")).setPort(55555).build();
+    var options = new edge.Options();
+    driver = edge.Driver.createSession(options, service);
+  }
 
   await driver.get("https://poe.com");
-await driver.manage().addCookie({ name: "p-b", value: COOKIE });
-await driver.get("https://poe.com/chatgpt");
+  await driver.manage().addCookie({ name: "p-b", value: COOKIE });
+  await driver.get("https://poe.com/chatgpt");
 }
+
+initializeDriver();
 
 async function test(req, res) {
     if(req.body.reverse_proxy) return res.send(true)

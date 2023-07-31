@@ -14,5 +14,3 @@ export const MODERATION = false; // Moderation mode (Set to true to enable conte
 export let COOKIE = process.env.COOKIE || "Your cookie here"; // User cookie value
 export let BROWSER = process.env.BROWSER || "edge"; // Browser type, defaults to "edge"
 export let WEBDRIVERMODE = process.env.DRIVERMODE == "true" || true; // Web driver mode (Set to true to enable web driver mode)
-export let JBWAITING = process.env.JBWAITING || 5; // JBWAITING value, defaults to 5
-export let RESULTWAITING = process.env.RESULTWAITING || 12; // RESULTWAITING value, defaults to 12
