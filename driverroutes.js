@@ -190,9 +190,9 @@ async function convertOAIToPoe(messages) {
 	await driver.executeScript("arguments[0].value = arguments[1]", textfield, firstPartWithNewLine);
 	if(isMessageTooLong) {
     await textfield.sendKeys("[Answer only with a \"Understood 2.\" to be able to give you your next instructions.]");
+	await driver.sleep(1500);
 	}
-	await driver.sleep(2000);
-
+	
 //Detect if "Submit button" is available and if "Understood." exists
 let buttonIsDisabled = true;
 while (buttonIsDisabled) {
@@ -217,15 +217,7 @@ while (buttonIsDisabled) {
           mensajeFinal += '\n';
         }
         mensajeFinal = mensajeFinal
-          .replaceAll("<em>", '*')
-          .replaceAll("</em>", '*')
-          .replaceAll("<br>", '')
-          .replaceAll("<p>", '')
-          .replaceAll("</p>", '')
-          .replaceAll('<a node="[object Object]" class="MarkdownLink_linkifiedLink__KxC9G">', '')
-          .replaceAll("</a>", '')
-          .replaceAll('<code node="[object Object]">', '')
-          .replaceAll('</code>', '');
+		  .replaceAll(/<br>|<\/?p>|<a node="\[object Object\]" class="MarkdownLink_linkifiedLink__KxC9G">|<\/a>|<code node="\[object Object\]">|<\/code>|<\/?em>/g, '');
 
         if (mensajeFinal.includes("Understood.")) {
           console.log("Understood, detected");
@@ -244,16 +236,8 @@ while (buttonIsDisabled) {
               mensajeFinal += '\n';
             }
             mensajeFinal = mensajeFinal
-              .replaceAll("<em>", '*')
-              .replaceAll("</em>", '*')
-              .replaceAll("<br>", '')
-              .replaceAll("<p>", '')
-              .replaceAll("</p>", '')
-              .replaceAll('<a node="[object Object]" class="MarkdownLink_linkifiedLink__KxC9G">', '')
-              .replaceAll("</a>", '')
-              .replaceAll('<code node="[object Object]">', '')
-              .replaceAll('</code>', '');
-
+			  .replaceAll(/<br>|<\/?p>|<a node="\[object Object\]" class="MarkdownLink_linkifiedLink__KxC9G">|<\/a>|<code node="\[object Object\]">|<\/code>|<\/?em>/g, '');
+			  
             if (!mensajeFinal.includes("Understood.")) {
               break;
             }
@@ -262,6 +246,7 @@ while (buttonIsDisabled) {
           if (isMessageTooLong) {
             console.log("Sending [CHAT]");
             await driver.executeScript("arguments[0].value = arguments[1]", textfield, "[CHAT]\n" + remainingPart);
+			await driver.sleep(2000);
           }
           break;
         }
@@ -274,7 +259,6 @@ while (buttonIsDisabled) {
 
 //Detect if "Submit button 2" is available and if "Understood 2." exists
 if (isMessageTooLong) {
-  await driver.sleep(2000);
   let actionButtonInactive = true;
   while (actionButtonInactive) {
     try {
@@ -298,15 +282,7 @@ if (isMessageTooLong) {
             finalMessage += '\n';
           }
           finalMessage = finalMessage
-            .replaceAll("<em>", '*')
-            .replaceAll("</em>", '*')
-            .replaceAll("<br>", '')
-            .replaceAll("<p>", '')
-            .replaceAll("</p>", '')
-            .replaceAll('<a node="[object Object]" class="MarkdownLink_linkifiedLink__KxC9G">', '')
-            .replaceAll("</a>", '')
-            .replaceAll('<code node="[object Object]">', '')
-            .replaceAll('</code>', '');
+			.replaceAll(/<br>|<\/?p>|<a node="\[object Object\]" class="MarkdownLink_linkifiedLink__KxC9G">|<\/a>|<code node="\[object Object\]">|<\/code>|<\/?em>/g, '');
 
           if (finalMessage.includes("Understood 2.")) {
             console.log("Understood 2, detected");
@@ -325,15 +301,7 @@ if (isMessageTooLong) {
                 finalMessage += '\n';
               }
               finalMessage = finalMessage
-                .replaceAll("<em>", '*')
-                .replaceAll("</em>", '*')
-                .replaceAll("<br>", '')
-                .replaceAll("<p>", '')
-                .replaceAll("</p>", '')
-                .replaceAll('<a node="[object Object]" class="MarkdownLink_linkifiedLink__KxC9G">', '')
-                .replaceAll("</a>", '')
-                .replaceAll('<code node="[object Object]">', '')
-                .replaceAll('</code>', '');
+				.replaceAll(/<br>|<\/?p>|<a node="\[object Object\]" class="MarkdownLink_linkifiedLink__KxC9G">|<\/a>|<code node="\[object Object\]">|<\/code>|<\/?em>/g, '');
 
               if (!finalMessage.includes("Understood 2.")) {
                 break;
@@ -349,41 +317,6 @@ if (isMessageTooLong) {
       console.error(exception);
     }
   }
-}
-
-//Detect if "[CHAT]" or "..." exist
-let mensajeFinalChat = '';
-let contenidoWebActualChat, contenidoWebNuevoChat = '';
-
-while (true) {
-  contenidoWebActualChat = await driver.getPageSource();
-  let raizHTMLChat = htmlparser.parse(contenidoWebActualChat);
-  let elementosMarkdownChat = raizHTMLChat.querySelectorAll(".Markdown_markdownContainer__UyYrv");
-  let ultimaBurbujaChatChat = elementosMarkdownChat[elementosMarkdownChat.length - 1].querySelectorAll('p');
-
-  for (let elementoChat in ultimaBurbujaChatChat) {
-    mensajeFinalChat += ultimaBurbujaChatChat[elementoChat].innerHTML;
-    mensajeFinalChat += '\n';
-  }
-  mensajeFinalChat = mensajeFinalChat.replaceAll("<em>", '*')
-    .replaceAll("</em>", '*')
-    .replaceAll("<br>", '')
-    .replaceAll("<p>", '')
-    .replaceAll("</p>", '')
-    .replaceAll('<a node="[object Object]" class="MarkdownLink_linkifiedLink__KxC9G">', '')
-    .replaceAll("</a>", '')
-    .replaceAll('<code node="[object Object]">', '')
-    .replaceAll('</code>', '');
-
-  if (mensajeFinalChat.includes("[CHAT]") || mensajeFinalChat.includes("...")) {
-    console.log("Awaiting response");
-	mensajeFinalChat = '';
-  } else {
-    console.log("Response was detected");
-    break;
-  }
-
-  await new Promise(resolver => setTimeout(resolver, 500));
 }
 
 //Wait button
@@ -436,15 +369,9 @@ async function sagedriverCompletion(req, res) {
       lastmsg += '\n';
     }
 
-    lastmsg = lastmsg.replaceAll("<em>", '*')
-      .replaceAll("</em>", '*')
-      .replaceAll("<br>", '')
-      .replaceAll("<p>", '')
-      .replaceAll("</p>", '')
-      .replaceAll('<a node="[object Object]" class="MarkdownLink_linkifiedLink__KxC9G">', '')
-      .replaceAll("</a>", '')
-      .replaceAll('<code node="[object Object]">', '')
-      .replaceAll('</code>', '');
+    lastmsg = lastmsg
+	  .replaceAll(/<\/?em>/g, '*')
+	  .replaceAll(/<br>|<\/?p>|<a node="\[object Object\]" class="MarkdownLink_linkifiedLink__KxC9G">|<\/a>|<code node="\[object Object\]">|<\/code>/g, '');
 
     console.log('Proceeding to the next steps');
     break;
