@@ -5,14 +5,13 @@ import { Builder, By, Key } from "selenium-webdriver";
 import htmlparser from "node-html-parser";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { WEBDRIVERMODE, COOKIE, BROWSER } from "./config.js";
+import { WEBDRIVERMODE, BROWSER } from "./config.js";
 
 let charname = "";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-console.log(COOKIE);
 console.log(WEBDRIVERMODE);
 var driver;
 
@@ -34,10 +33,8 @@ async function initializeDriver() {
     var options = new edge.Options();
     driver = edge.Driver.createSession(options, service);
   }
-
+  await new Promise((resolve) => setTimeout(resolve, 2000));
   await driver.get("https://poe.com");
-  await driver.manage().addCookie({ name: "p-b", value: COOKIE });
-  await driver.get("https://poe.com/chatgpt");
 }
 
 initializeDriver();
