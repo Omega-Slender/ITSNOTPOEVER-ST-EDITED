@@ -1,4 +1,5 @@
-# IT'S NOT POEVER ST EDITED
+#"IT'S NOT POEVER ST EDITED" PROJECT CANCELLED
+
 Tutorial:
 https://docs.google.com/presentation/d/1v8Vynl4dCupXTfzF4DBhzV1TCk8aAjT9xqlwF2izJdE/edit?usp=sharing
 
